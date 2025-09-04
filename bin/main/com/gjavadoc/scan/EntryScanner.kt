@@ -12,7 +12,10 @@ class EntryScanner(private val project: Project) {
 
     fun scan(scope: GlobalSearchScope? = null): List<EntryPoint> {
         val settings = SettingsState.getInstance(project).state
-        val target = settings.annotation.trimStart('@')
+        val targets: List<String> = settings.annotation
+            .split(',', ';', '\n', '\t', ' ')
+            .map { it.trim().trimStart('@') }
+            .filter { it.isNotEmpty() }
         val sc = scope ?: GlobalSearchScope.projectScope(project)
         val result = mutableListOf<EntryPoint>()
         val javaFiles = FilenameIndex.getAllFilesByExt(project, "java", sc)
@@ -21,9 +24,9 @@ class EntryScanner(private val project: Project) {
         for (vf in javaFiles) {
             val psi = psiManager.findFile(vf) as? PsiJavaFile ?: continue
             for (cls in psi.classes) {
-                val classTagged = hasAnnotation(cls.modifierList, target)
+                val classTagged = hasAnyAnnotation(cls.modifierList, targets)
                 for (method in cls.methods) {
-                    val match = classTagged || hasAnnotation(method.modifierList, target)
+                    val match = classTagged || hasAnyAnnotation(method.modifierList, targets)
                     if (!match) continue
                     val ep = entryPointFor(vf, cls, method, settings.annotation)
                     result.add(ep)
@@ -33,12 +36,14 @@ class EntryScanner(private val project: Project) {
         return result
     }
 
-    private fun hasAnnotation(modifierList: PsiModifierList?, target: String): Boolean {
+    private fun hasAnyAnnotation(modifierList: PsiModifierList?, targets: List<String>): Boolean {
         if (modifierList == null) return false
         for (ann in modifierList.annotations) {
             val qn = ann.qualifiedName ?: ""
             val sn = ann.nameReferenceElement?.referenceName ?: ""
-            if (qn.endsWith(".$target") || sn == target || qn == target) return true
+            for (t in targets) {
+                if (qn.endsWith(".$t") || sn == t || qn == t) return true
+            }
         }
         return false
     }

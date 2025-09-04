@@ -30,7 +30,7 @@ class StubLLMClient(private val project: Project) : LLMClient {
         val md = buildString {
             appendLine("接口名称：${entry.classFqn}.${entry.method.substringBefore('(')}（推断）")
             appendLine("接口说明：示例占位，由 Stub 生成（推断）")
-            val http = when (classifyMethodName(entry.method.substringBefore('('))) {
+            val http = when (classifyMethodName(entry.method.substringBefore('('), SettingsState.getInstance(project).state.crudPatterns)) {
                 MethodCategory.CREATE -> "POST"
                 MethodCategory.READ -> "GET"
                 MethodCategory.UPDATE -> "PUT"

@@ -34,7 +34,7 @@
  - Run Scan / Stop / Cancel / Cancel All / Retry / Retry Failed / Retry Timeouts / Requeue / Clear / Resume From List / Open Source / Open Context / Open JSON / Open Markdown / Edit Prompt
 
 4. 设置说明（Settings → GJavaDoc）
-- Annotation：扫描入口注解（默认 `@RpcService`，可写简名或全名）
+- Annotation：扫描入口注解（默认 `@RpcService`，可写简名或全名；支持多个，逗号分隔。类或方法上任一匹配即入选）
 - Analysis Backend：`STUB` 或 `WALA`
 - Context：
   - `typeDepth` 关联类型深度；`collectCalled` 是否收集被调方法；`calledDepth` 深度

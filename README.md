@@ -4,7 +4,7 @@ G for Garbage——把难啃的“垃圾”式遗留代码清运为可读文档�
 GJavaDoc 是一款在 IntelliJ IDEA 中运行的“接口文档生成器”。它基于注解扫描入口方法，结合代码切片和本地 LLM，自动生成 Markdown 说明文档，并支持类级文档、上下文打包、并发执行与失败重试等能力。
 
 核心特点
-- 注解扫描：按设置的注解（默认 `@RpcService`）扫描 Java 入口方法
+- 注解扫描：按设置的注解扫描 Java 入口方法（支持多个注解，逗号分隔；默认 `@RpcService`）
 - 增量生成：再次点击 Scan 时，仅为缺失的文档入队（以 `docs/` 文件名为准）
 - 模块选择：在工具窗选择单个 Module 或 ALL 扫描
 - 类/方法两种粒度：可按类汇总生成，或按具体方法签名生成
@@ -29,7 +29,15 @@ GJavaDoc 是一款在 IntelliJ IDEA 中运行的“接口文档生成器”。�
 
 使用指引（简版）
 - 注解设置：Settings → GJavaDoc → Annotation（默认 `@RpcService`）
+- 多注解：支持在 Annotation 中以逗号分隔填写多个注解；类或方法上任一命中即作为入口
 - CRUD 过滤：工具窗顶部 Advanced → 勾选 CREATE/READ/UPDATE/DELETE/OTHER 决定扫描范围
+- 自定义 CRUD 前缀：Settings → GJavaDoc → Context → CRUD Patterns
+  - 以逗号分隔维护前缀（大小写不敏感），分类规则为“方法名以任一前缀开头”
+  - 默认：
+    - CREATE: create, add, insert, save, new
+    - READ: get, query, list, find, select, count, load
+    - UPDATE: update, set, modify, patch, enable, disable
+    - DELETE: delete, remove, del, clear
 - 扫描与入队：
   - Run Scan：全量扫描并入队
   - 增量跳过：只入队 `docs/` 中“缺失”的条目

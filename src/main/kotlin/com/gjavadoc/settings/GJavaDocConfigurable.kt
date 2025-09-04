@@ -73,6 +73,10 @@ class GJavaDocConfigurable() : Configurable {
     private val includeUpdate = JBCheckBox("Include UPDATE / 包含更新", true)
     private val includeDelete = JBCheckBox("Include DELETE / 包含删除", true)
     private val includeOther = JBCheckBox("Include OTHER / 包含其他", true)
+    private val patCreate = JBTextField("create,add,insert,save,new")
+    private val patRead = JBTextField("get,query,list,find,select,count,load")
+    private val patUpdate = JBTextField("update,set,modify,patch,enable,disable")
+    private val patDelete = JBTextField("delete,remove,del,clear")
     private val perClassDoc = JBCheckBox("Per-class document / 类级文档（一个类→一个文档）", false)
     private val groupDocsByModule = JBCheckBox("Group docs by module / 文档按模块分目录", false)
 
@@ -90,7 +94,7 @@ class GJavaDocConfigurable() : Configurable {
         // General tab (Annotation, Analysis, LLM basics)
         fun buildGeneral(): JPanel {
             val fb = FormBuilder.createFormBuilder()
-            fb.addLabeledComponent(JBLabel("Annotation / 注解"), annotationField, 1, false)
+            fb.addLabeledComponent(JBLabel("Annotation(s) / 注解（多个用逗号分隔）"), annotationField, 1, false)
             fb.addLabeledComponent(JBLabel("Analysis Backend / 分析后端"), backendCombo, 1, false)
             fb.addComponent(perClassDoc)
             fb.addComponent(groupDocsByModule)
@@ -144,6 +148,13 @@ class GJavaDocConfigurable() : Configurable {
                 layout = java.awt.FlowLayout(java.awt.FlowLayout.LEFT, 8, 0)
                 add(includeCreate); add(includeRead); add(includeUpdate); add(includeDelete); add(includeOther)
             }, 1, false)
+            fb.addLabeledComponent(JBLabel("CRUD Patterns / 名称前缀(逗号分隔)"), JPanel().apply {
+                layout = java.awt.GridLayout(2,2,8,4)
+                add(JBLabel("CREATE:")); add(patCreate)
+                add(JBLabel("READ:")); add(patRead)
+                add(JBLabel("UPDATE:")); add(patUpdate)
+                add(JBLabel("DELETE:")); add(patDelete)
+            }, 1, false)
             return fb.panel
         }
 
@@ -190,6 +201,10 @@ class GJavaDocConfigurable() : Configurable {
                 includeUpdate.isSelected != s.crud.includeUpdate ||
                 includeDelete.isSelected != s.crud.includeDelete ||
                 includeOther.isSelected != s.crud.includeOther ||
+                patCreate.text.trim() != s.crudPatterns.create.joinToString(",") ||
+                patRead.text.trim() != s.crudPatterns.read.joinToString(",") ||
+                patUpdate.text.trim() != s.crudPatterns.update.joinToString(",") ||
+                patDelete.text.trim() != s.crudPatterns.delete.joinToString(",") ||
                 perClassDoc.isSelected != s.perClassDocument ||
                 groupDocsByModule.isSelected != s.groupDocsByModule ||
                 (maxConcSpinner.value as Int) != s.maxConcurrentRequests ||
@@ -229,6 +244,10 @@ class GJavaDocConfigurable() : Configurable {
         s.crud.includeUpdate = includeUpdate.isSelected
         s.crud.includeDelete = includeDelete.isSelected
         s.crud.includeOther = includeOther.isSelected
+        s.crudPatterns.create = patCreate.text.split(',').map { it.trim() }.filter { it.isNotEmpty() }.toMutableList()
+        s.crudPatterns.read = patRead.text.split(',').map { it.trim() }.filter { it.isNotEmpty() }.toMutableList()
+        s.crudPatterns.update = patUpdate.text.split(',').map { it.trim() }.filter { it.isNotEmpty() }.toMutableList()
+        s.crudPatterns.delete = patDelete.text.split(',').map { it.trim() }.filter { it.isNotEmpty() }.toMutableList()
         s.perClassDocument = perClassDoc.isSelected
         s.groupDocsByModule = groupDocsByModule.isSelected
         s.maxConcurrentRequests = (maxConcSpinner.value as Int)
@@ -267,6 +286,10 @@ class GJavaDocConfigurable() : Configurable {
         includeUpdate.isSelected = s.crud.includeUpdate
         includeDelete.isSelected = s.crud.includeDelete
         includeOther.isSelected = s.crud.includeOther
+        patCreate.text = s.crudPatterns.create.joinToString(",")
+        patRead.text = s.crudPatterns.read.joinToString(",")
+        patUpdate.text = s.crudPatterns.update.joinToString(",")
+        patDelete.text = s.crudPatterns.delete.joinToString(",")
         perClassDoc.isSelected = s.perClassDocument
         groupDocsByModule.isSelected = s.groupDocsByModule
         maxConcSpinner.value = s.maxConcurrentRequests

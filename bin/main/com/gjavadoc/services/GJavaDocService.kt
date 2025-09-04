@@ -47,7 +47,7 @@ class GJavaDocService(private val project: Project) {
                 val crud = crudOverride ?: s.crud
                 val filtered = entries.filter { ep ->
                     val base = ep.method.substringBefore('(')
-                    when (classifyMethodName(base)) {
+                    when (classifyMethodName(base, s.crudPatterns)) {
                         MethodCategory.CREATE -> crud.includeCreate
                         MethodCategory.READ -> crud.includeRead
                         MethodCategory.UPDATE -> crud.includeUpdate

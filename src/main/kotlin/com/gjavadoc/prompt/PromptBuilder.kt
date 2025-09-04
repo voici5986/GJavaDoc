@@ -10,9 +10,9 @@ object PromptBuilder {
     fun build(project: Project, entry: EntryPoint, context: String): String {
         val s = SettingsState.getInstance(project).state
         if (s.customPromptEnabled && s.customPrompt.isNotBlank()) {
-            return renderCustomTemplate(s.customPrompt, entry, context)
+            return renderCustomTemplate(project, s.customPrompt, entry, context)
         }
-        return buildDefault(entry, context)
+        return buildDefault(project, entry, context)
     }
 
     fun defaultTemplate(): String = buildString {
@@ -100,10 +100,10 @@ object PromptBuilder {
         appendLine("- 若某字段无法确定类型或是否必须，请给出合理推断并标注“推断”。")
     }
 
-    private fun buildDefault(entry: EntryPoint, context: String): String {
+    private fun buildDefault(project: Project, entry: EntryPoint, context: String): String {
         // Keep previous default behavior
         val methodBase = entry.method.substringBefore('(')
-        val cat = classifyMethodName(methodBase)
+        val cat = classifyMethodName(methodBase, SettingsState.getInstance(project).state.crudPatterns)
         val http = when (cat) {
             MethodCategory.CREATE -> "POST"
             MethodCategory.READ -> "GET"
@@ -114,9 +114,9 @@ object PromptBuilder {
         return defaultTemplate().replace("${'$'}{CONTEXT}", context)
     }
 
-    private fun renderCustomTemplate(tpl: String, entry: EntryPoint, context: String): String {
+    private fun renderCustomTemplate(project: Project, tpl: String, entry: EntryPoint, context: String): String {
         val methodBase = entry.method.substringBefore('(')
-        val http = when (classifyMethodName(methodBase)) {
+        val http = when (classifyMethodName(methodBase, SettingsState.getInstance(project).state.crudPatterns)) {
             MethodCategory.CREATE -> "POST"
             MethodCategory.READ -> "GET"
             MethodCategory.UPDATE -> "PUT"

@@ -38,6 +38,17 @@ class SettingsState : PersistentStateComponent<SettingsState.State> {
         var includeOther: Boolean = true,
     )
 
+    /**
+     * Customizable CRUD name prefixes used to classify method names.
+     * Values are case-insensitive; matching uses startsWith on the lower-cased method name.
+     */
+    data class CrudPatterns(
+        var create: MutableList<String> = mutableListOf("create", "add", "insert", "save", "new"),
+        var read: MutableList<String> = mutableListOf("get", "query", "list", "find", "select", "count", "load"),
+        var update: MutableList<String> = mutableListOf("update", "set", "modify", "patch", "enable", "disable"),
+        var delete: MutableList<String> = mutableListOf("delete", "remove", "del", "clear"),
+    )
+
     data class UIConfig(
         var lastStatusFilter: String = "ALL",
         var lastSearchText: String = "",
@@ -57,6 +68,7 @@ class SettingsState : PersistentStateComponent<SettingsState.State> {
         var authToken: String? = null,
         var context: ContextConfig = ContextConfig(),
         var crud: CrudFilter = CrudFilter(),
+        var crudPatterns: CrudPatterns = CrudPatterns(),
         var perClassDocument: Boolean = false,
         var maxConcurrentRequests: Int = 2,
         var requestsPerSecond: Double = 1.5,
