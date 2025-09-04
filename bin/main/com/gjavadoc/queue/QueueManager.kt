@@ -32,11 +32,15 @@ class QueueManager(private val project: Project) {
     private val log = Logger.getInstance(QueueManager::class.java)
     private val running = AtomicBoolean(false)
     private var scheduler: ScheduledExecutorService? = null
-    @Volatile private var runningCount = 0
+    // Use AtomicInteger for thread-safe concurrency accounting
+    private val runningCount = java.util.concurrent.atomic.AtomicInteger(0)
     private val repo = project.getService(TaskRepository::class.java)
     private val settings get() = SettingsState.getInstance(project).state
     @Volatile private var queue: ArrayBlockingQueue<TaskModel>? = null
     private val indicators = ConcurrentHashMap<String, ProgressIndicator>()
+    // Hard concurrency limiter in addition to runningCount-based gating
+    // Ensures we never oversubscribe even if there are races.
+    @Volatile private var permits = java.util.concurrent.Semaphore(SettingsState.getInstance(project).state.maxConcurrentRequests, true)
     private val backlog = ConcurrentLinkedQueue<TaskModel>()
     @Volatile private var lastHeartbeatNs: Long = 0L
 
@@ -70,6 +74,8 @@ class QueueManager(private val project: Project) {
 
     fun start() {
         if (!running.compareAndSet(false, true)) return
+        // Reset concurrency limiter to current settings on every start
+        permits = java.util.concurrent.Semaphore(settings.maxConcurrentRequests, true)
         val rps = settings.requestsPerSecond
         val periodMs = if (rps <= 0.0) 1000L else (1000.0 / rps).toLong().coerceAtLeast(1L)
         scheduler = Executors.newSingleThreadScheduledExecutor()
@@ -91,7 +97,7 @@ class QueueManager(private val project: Project) {
         val q = ensureQueue()
         q.clear()
         backlog.clear()
-        runningCount = 0
+        runningCount.set(0)
         log.info("GJavaDoc queue cleared")
     }
 
@@ -121,6 +127,7 @@ class QueueManager(private val project: Project) {
 
     private fun tick() {
         if (!running.get()) return
+        refreshLimiterIfChanged()
         val q = ensureQueue()
         // Fill bounded queue from backlog up to remaining capacity
         var rem = q.remainingCapacity()
@@ -128,11 +135,18 @@ class QueueManager(private val project: Project) {
             val next = backlog.poll() ?: break
             if (q.offer(next)) rem-- else break
         }
-        val capacity = settings.maxConcurrentRequests - runningCount
+        // Derive capacity from actual running indicators to avoid drift across threads
+        val capacity = settings.maxConcurrentRequests - indicators.size
         if (capacity <= 0) return
         var dispatched = 0
         while (dispatched < capacity) {
             val task = q.poll() ?: break
+            // Double guard: also acquire a permit; if we cannot, push it back and stop dispatching now.
+            if (!permits.tryAcquire()) {
+                // No permit available — return task to the head (best-effort) and break
+                q.offer(task)
+                break
+            }
             executeTask(task)
             dispatched++
         }
@@ -146,7 +160,7 @@ class QueueManager(private val project: Project) {
         val out = OutputWriter(project)
         val packager = ContextPackager(project)
 
-        runningCount++
+        runningCount.incrementAndGet()
         ProgressManager.getInstance().run(object : Task.Backgroundable(project, "GJavaDoc: ${task.entry.classFqn}#${task.entry.method}", true) {
             override fun run(indicator: ProgressIndicator) {
                 indicators[task.taskId] = indicator
@@ -182,7 +196,9 @@ class QueueManager(private val project: Project) {
                 } catch (t: Throwable) {
                     handleFailure(task, t)
                 } finally {
-                    runningCount--
+                    runningCount.decrementAndGet()
+                    // Release hard limiter permit
+                    permits.release()
                     indicators.remove(task.taskId)
                     // Emit heartbeat after a task finishes to refresh counts promptly
                     publishHeartbeat()
@@ -214,6 +230,8 @@ class QueueManager(private val project: Project) {
         task.status = status
         task.progress = TaskProgress(fraction, message)
         repo.upsert(task)
+        // Push a heartbeat immediately so UI Running count stays in sync with table updates
+        publishHeartbeat()
     }
 
     private fun safe(id: String): String = id.replace(Regex("[^a-zA-Z0-9._-]"), "_")
@@ -270,7 +288,8 @@ class QueueManager(private val project: Project) {
             val repoRunning = try {
                 repo.all().count { it.status == TaskStatus.RUNNING }
             } catch (_: Throwable) { 0 }
-            val displayRunning = kotlin.math.max(runningCount, repoRunning)
+            val actualRunning = indicators.size
+            val displayRunning = kotlin.math.max(actualRunning, repoRunning)
             val status = QueueStatus(
                 running = running.get(),
                 runningCount = displayRunning,
@@ -281,6 +300,26 @@ class QueueManager(private val project: Project) {
                 requestsPerSecond = settings.requestsPerSecond,
             )
             project.messageBus.syncPublisher(GJavaDocBusTopics.QUEUE_EVENTS).onQueueHeartbeat(status)
+        }
+    }
+
+    private fun refreshLimiterIfChanged() {
+        // Adjust semaphore permits to reflect current maxConcurrentRequests from settings.
+        // We cannot reduce below the number of currently running tasks; extra reduction will happen as tasks complete.
+        val desired = settings.maxConcurrentRequests
+        val currentRunning = runningCount.get()
+        val currentTotal = permits.availablePermits() + currentRunning
+        if (desired > currentTotal) {
+            // Need to add permits
+            permits.release(desired - currentTotal)
+        } else if (desired < currentTotal) {
+            // Need to reduce available permits to (desired - running), but not below zero.
+            val targetAvailable = (desired - currentRunning).coerceAtLeast(0)
+            val toAcquire = permits.availablePermits() - targetAvailable
+            if (toAcquire > 0) {
+                // Acquire from ourselves to reduce availability
+                repeat(toAcquire) { permits.tryAcquire() }
+            }
         }
     }
 }
