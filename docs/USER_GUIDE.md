@@ -40,6 +40,11 @@
   - `typeDepth` 关联类型深度；`collectCalled` 是否收集被调方法；`calledDepth` 深度
   - `maxChars` 上下文最大字符数（过长会截断并提示）
   - 类型筛选：`typeSuffixes`、`packageKeywords`、`annotationWhitelist`
+  - CRUD Patterns：自定义方法名的 CRUD 前缀（逗号分隔；大小写不敏感）
+    - CREATE: create, add, insert, save, new（可自定义）
+    - READ: get, query, list, find, select, count, load（可自定义）
+    - UPDATE: update, set, modify, patch, enable, disable（可自定义）
+    - DELETE: delete, remove, del, clear（可自定义）
 - Queue：`maxConcurrentRequests`、`requestsPerSecond`、`queueSize`、`requestTimeoutSec`
 - Retry：`enabled`、`maxAttempts`、`backoffMs`
 - Persist：`historyLimit`
@@ -49,7 +54,7 @@
 - Run Scan：
   - IDEA 等待索引完成后（Smart Mode）对全项目扫描符合注解的入口。
   - 可在工具窗选择 Module（或 ALL）只扫描指定模块。
-  - 依据 CRUD 勾选过滤（Create/Read/Update/Delete/Other）。
+  - 依据 CRUD 勾选过滤（Create/Read/Update/Delete/Other），分类规则使用“CRUD Patterns”中维护的前缀集合。
   - 增量入队：只对 `docs/` 中缺失的条目入队。
 - Resume From List：
   - 支持行格式：
