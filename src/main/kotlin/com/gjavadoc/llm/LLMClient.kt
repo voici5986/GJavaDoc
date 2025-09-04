@@ -27,28 +27,31 @@ class StubLLMClient(private val project: Project) : LLMClient {
     override fun generate(entry: EntryPoint, analysis: CGSliceResult, contextText: String): LLMDoc {
         val settings = SettingsState.getInstance(project).state
         val prompt = PromptBuilder.build(project, entry, contextText)
-        val md = """
-            接口名称：${entry.classFqn}.${entry.method.substringBefore('(')}（推断）
-            接口说明：示例占位，由 Stub 生成（推断）
-            请求方式：${when (classifyMethodName(entry.method.substringBefore('('))) {
+        val md = buildString {
+            appendLine("接口名称：${entry.classFqn}.${entry.method.substringBefore('(')}（推断）")
+            appendLine("接口说明：示例占位，由 Stub 生成（推断）")
+            val http = when (classifyMethodName(entry.method.substringBefore('('))) {
                 MethodCategory.CREATE -> "POST"
                 MethodCategory.READ -> "GET"
                 MethodCategory.UPDATE -> "PUT"
                 MethodCategory.DELETE -> "DELETE"
                 MethodCategory.OTHER -> "POST"
-            }}（推断）
-
-            输入参数：
-
-            参数名\t类型\t是否必须\t说明
-            param\tObject\t否\t示例占位
-
-            输出参数：
-
-            参数名\t类型\t是否必须\t说明
-            code\tint\t是\t状态码
-            message\tString\t是\t提示信息
-        """.trimIndent()
+            }
+            appendLine("请求方式：${http}（推断）")
+            appendLine()
+            appendLine("输入参数：")
+            appendLine()
+            appendLine("|参数名|类型|是否必须|说明|")
+            appendLine("|---|---|---|---|")
+            appendLine("|param|Object|否|示例占位|")
+            appendLine()
+            appendLine("输出参数：")
+            appendLine()
+            appendLine("|参数名|类型|是否必须|说明|")
+            appendLine("|---|---|---|---|")
+            appendLine("|code|int|是|状态码|")
+            appendLine("|message|String|是|提示信息|")
+        }
         // Stub: return only Markdown; keep JSON empty
         return LLMDoc(json = "", markdown = md)
     }

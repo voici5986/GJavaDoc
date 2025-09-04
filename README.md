@@ -69,5 +69,6 @@ GJavaDoc 是一款在 IntelliJ IDEA 中运行的“接口文档生成器”。�
   - 增量索引：`src/main/kotlin/com/gjavadoc/io/ExistingOutputs.kt`
   - 开机恢复：`src/main/kotlin/com/gjavadoc/lifecycle/AutoResumeStartup.kt`
 - 测试：`src/test/kotlin/com/gjavadoc/io/ExistingOutputsTest.kt` 覆盖 docs 文件名解析（含签名/类级/泛型/数组/内部类等）
+- 建议最小可用模型：`DeepSeek-R1-Distill-Qwen-32B`
 
 完整操作手册请见 `docs/USER_GUIDE.md`。
