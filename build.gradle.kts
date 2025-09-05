@@ -37,9 +37,10 @@ dependencies {
 
 tasks {
   patchPluginXml {
-    // Support 2023.2+ and do not cap upper version
+    // Declare compatibility range explicitly to avoid using magic 999.*
+    // 232 = 2023.2, 242 = 2024.2 (matches intellij.version above)
     sinceBuild.set("232")
-    untilBuild.set("999.*")
+    untilBuild.set("242.*")
   }
 
   // Avoid requiring a running IDE instance during build
