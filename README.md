@@ -80,3 +80,9 @@ GJavaDoc 是一款在 IntelliJ IDEA 中运行的“接口文档生成器”。�
 - 建议最小可用模型：`DeepSeek-R1-Distill-Qwen-32B`
 
 完整操作手册请见 `docs/USER_GUIDE.md`。
+
+## 联系方式
+
+- 微信：扫描下方二维码添加好友（备注“GJavaDoc”），一起交流插件使用与改进建议。
+
+![微信二维码（温州程序员劝退师）](docs/wechat-qr.jpg)
