@@ -64,7 +64,7 @@ class SettingsState : PersistentStateComponent<SettingsState.State> {
         var model: String = "Qwen-32B",
         var useHttpClient: Boolean = false,
         var analysisBackend: String = "STUB", // STUB or WALA
-        var llmProvider: String = "OPENAI", // OPENAI or OLLAMA
+        var llmProvider: String = "OPENAI", // OPENAI, OLLAMA, DEEPSEEK
         var authToken: String? = null,
         var context: ContextConfig = ContextConfig(),
         var crud: CrudFilter = CrudFilter(),
@@ -84,6 +84,9 @@ class SettingsState : PersistentStateComponent<SettingsState.State> {
         var openaiMaxTokens: Int = 4096,
         var openaiTemperature: Double = 0.7,
         var openaiTopP: Double = 1.0,
+        // DeepSeek-specific settings for preset configurations
+        var deepSeekEndpoint: String = "https://api.deepseek.com/v1/chat/completions",
+        var deepSeekModel: String = "deepseek-chat",
     )
 
     private var state: State = State()
