@@ -1,3 +1,5 @@
+[在 JetBrains Marketplace 查看插件](https://plugins.jetbrains.com/plugin/28384-gjavadoc)
+
 # GJavaDoc (IntelliJ Plugin)
 G for Garbage——把难啃的“垃圾”式遗留代码清运为可读文档。
 
