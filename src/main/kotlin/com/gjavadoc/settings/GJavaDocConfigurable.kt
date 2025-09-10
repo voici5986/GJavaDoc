@@ -269,37 +269,37 @@ class GJavaDocConfigurable() : Configurable {
                 backendCombo.selectedItem != s.analysisBackend ||
                 providerCombo.selectedItem != s.llmProvider ||
                 String(tokenField.password).trim() != (s.authToken ?: "") ||
-                (typeDepthSpinner.value as Int) != s.context.typeDepth ||
-                (calledDepthSpinner.value as Int) != s.context.calledDepth ||
+                typeDepthSpinner.value != s.context.typeDepth ||
+                calledDepthSpinner.value != s.context.calledDepth ||
                 collectCalledCheckbox.isSelected != s.context.collectCalled ||
-                (maxCharsSpinner.value as Int) != s.context.maxChars ||
-                typeSuffixesField.text.trim() != s.context.typeSuffixes.joinToString(",") ||
-                pkgKeywordsField.text.trim() != s.context.packageKeywords.joinToString(",") ||
-                annoWhitelistField.text.trim() != s.context.annotationWhitelist.joinToString(",") ||
+                maxCharsSpinner.value != s.context.maxChars ||
+                typeSuffixesField.text != s.context.typeSuffixes.joinToString(",") ||
+                pkgKeywordsField.text != s.context.packageKeywords.joinToString(",") ||
+                annoWhitelistField.text != s.context.annotationWhitelist.joinToString(",") ||
                 includeCreate.isSelected != s.crud.includeCreate ||
                 includeRead.isSelected != s.crud.includeRead ||
                 includeUpdate.isSelected != s.crud.includeUpdate ||
                 includeDelete.isSelected != s.crud.includeDelete ||
                 includeOther.isSelected != s.crud.includeOther ||
-                patCreate.text.trim() != s.crudPatterns.create.joinToString(",") ||
-                patRead.text.trim() != s.crudPatterns.read.joinToString(",") ||
-                patUpdate.text.trim() != s.crudPatterns.update.joinToString(",") ||
-                patDelete.text.trim() != s.crudPatterns.delete.joinToString(",") ||
+                patCreate.text != s.crudPatterns.create.joinToString(",") ||
+                patRead.text != s.crudPatterns.read.joinToString(",") ||
+                patUpdate.text != s.crudPatterns.update.joinToString(",") ||
+                patDelete.text != s.crudPatterns.delete.joinToString(",") ||
                 perClassDoc.isSelected != s.perClassDocument ||
                 groupDocsByModule.isSelected != s.groupDocsByModule ||
-                (maxConcSpinner.value as Int) != s.maxConcurrentRequests ||
-                (rpsSpinner.value as Double) != s.requestsPerSecond ||
-                (queueSizeSpinner.value as Int) != s.queueSize ||
-                (timeoutSpinner.value as Int) != s.requestTimeoutSec ||
+                maxConcSpinner.value != s.maxConcurrentRequests ||
+                rpsSpinner.value != s.requestsPerSecond ||
+                queueSizeSpinner.value != s.queueSize ||
+                timeoutSpinner.value != s.requestTimeoutSec ||
                 retryEnabled.isSelected != s.retry.enabled ||
-                (retryAttempts.value as Int) != s.retry.maxAttempts ||
-                (retryBackoff.value as Int) != s.retry.backoffMs.toInt() ||
-                (historyLimit.value as Int) != s.persist.historyLimit ||
+                retryAttempts.value != s.retry.maxAttempts ||
+                retryBackoff.value != s.retry.backoffMs.toInt() ||
+                historyLimit.value != s.persist.historyLimit ||
                 customPromptEnabled.isSelected != s.customPromptEnabled ||
                 promptArea.text != s.customPrompt ||
-                (openaiMaxTokens.value as Int) != s.openaiMaxTokens ||
-                (openaiTemperature.value as Double) != s.openaiTemperature ||
-                (openaiTopP.value as Double) != s.openaiTopP
+                openaiMaxTokens.value != s.openaiMaxTokens ||
+                openaiTemperature.value != s.openaiTemperature ||
+                openaiTopP.value != s.openaiTopP
     }
 
     override fun apply() {
@@ -346,48 +346,54 @@ class GJavaDocConfigurable() : Configurable {
     }
 
     override fun reset() {
-        val s = SettingsState.getInstance(project).state
-        annotationField.text = s.annotation
-        endpointField.text = s.llmEndpoint
-        modelField.text = s.model
-        httpEnabled.isSelected = s.useHttpClient
-        backendCombo.selectedItem = s.analysisBackend
-        providerCombo.selectedItem = s.llmProvider
-        tokenField.document.remove(0, tokenField.document.length)
-        tokenField.document.insertString(0, s.authToken ?: "", null)
-        typeDepthSpinner.value = s.context.typeDepth
-        calledDepthSpinner.value = s.context.calledDepth
-        collectCalledCheckbox.isSelected = s.context.collectCalled
-        maxCharsSpinner.value = s.context.maxChars
-        typeSuffixesField.text = s.context.typeSuffixes.joinToString(",")
-        pkgKeywordsField.text = s.context.packageKeywords.joinToString(",")
-        annoWhitelistField.text = s.context.annotationWhitelist.joinToString(",")
-        includeCreate.isSelected = s.crud.includeCreate
-        includeRead.isSelected = s.crud.includeRead
-        includeUpdate.isSelected = s.crud.includeUpdate
-        includeDelete.isSelected = s.crud.includeDelete
-        includeOther.isSelected = s.crud.includeOther
-        patCreate.text = s.crudPatterns.create.joinToString(",")
-        patRead.text = s.crudPatterns.read.joinToString(",")
-        patUpdate.text = s.crudPatterns.update.joinToString(",")
-        patDelete.text = s.crudPatterns.delete.joinToString(",")
-        perClassDoc.isSelected = s.perClassDocument
-        groupDocsByModule.isSelected = s.groupDocsByModule
-        maxConcSpinner.value = s.maxConcurrentRequests
-        rpsSpinner.value = s.requestsPerSecond
-        queueSizeSpinner.value = s.queueSize
-        timeoutSpinner.value = s.requestTimeoutSec
-        retryEnabled.isSelected = s.retry.enabled
-        retryAttempts.value = s.retry.maxAttempts
-        retryBackoff.value = s.retry.backoffMs.toInt()
-        historyLimit.value = s.persist.historyLimit
-        customPromptEnabled.isSelected = s.customPromptEnabled
-        promptArea.text = s.customPrompt
-        openaiMaxTokens.value = s.openaiMaxTokens
-        openaiTemperature.value = s.openaiTemperature
-        openaiTopP.value = s.openaiTopP
+        isResetting = true  // Set flag before resetting
+        try {
+            val s = SettingsState.getInstance(project).state
+            annotationField.text = s.annotation
+            endpointField.text = s.llmEndpoint
+            modelField.text = s.model
+            httpEnabled.isSelected = s.useHttpClient
+            backendCombo.selectedItem = s.analysisBackend
+            providerCombo.selectedItem = s.llmProvider
+            tokenField.text = s.authToken ?: ""
+            typeDepthSpinner.value = s.context.typeDepth
+            calledDepthSpinner.value = s.context.calledDepth
+            collectCalledCheckbox.isSelected = s.context.collectCalled
+            maxCharsSpinner.value = s.context.maxChars
+            typeSuffixesField.text = s.context.typeSuffixes.joinToString(",")
+            pkgKeywordsField.text = s.context.packageKeywords.joinToString(",")
+            annoWhitelistField.text = s.context.annotationWhitelist.joinToString(",")
+            includeCreate.isSelected = s.crud.includeCreate
+            includeRead.isSelected = s.crud.includeRead
+            includeUpdate.isSelected = s.crud.includeUpdate
+            includeDelete.isSelected = s.crud.includeDelete
+            includeOther.isSelected = s.crud.includeOther
+            patCreate.text = s.crudPatterns.create.joinToString(",")
+            patRead.text = s.crudPatterns.read.joinToString(",")
+            patUpdate.text = s.crudPatterns.update.joinToString(",")
+            patDelete.text = s.crudPatterns.delete.joinToString(",")
+            perClassDoc.isSelected = s.perClassDocument
+            groupDocsByModule.isSelected = s.groupDocsByModule
+            maxConcSpinner.value = s.maxConcurrentRequests
+            rpsSpinner.value = s.requestsPerSecond
+            queueSizeSpinner.value = s.queueSize
+            timeoutSpinner.value = s.requestTimeoutSec
+            retryEnabled.isSelected = s.retry.enabled
+            retryAttempts.value = s.retry.maxAttempts
+            retryBackoff.value = s.retry.backoffMs.toInt()
+            historyLimit.value = s.persist.historyLimit
+            customPromptEnabled.isSelected = s.customPromptEnabled
+            promptArea.text = s.customPrompt
+            openaiMaxTokens.value = s.openaiMaxTokens
+            openaiTemperature.value = s.openaiTemperature
+            openaiTopP.value = s.openaiTopP
+        } finally {
+            isResetting = false  // Clear flag after resetting
+        }
     }
 
+    private var isResetting = false  // Flag to prevent auto-fill during reset
+    
     init {
         tokenToggleButton.addActionListener {
             val currentEchoChar = tokenField.echoChar
@@ -500,6 +506,9 @@ class GJavaDocConfigurable() : Configurable {
         }
         // Auto-fill defaults when provider changes
         providerCombo.addActionListener {
+            // Don't auto-fill during reset
+            if (isResetting) return@addActionListener
+            
             val selected = providerCombo.selectedItem as String?
             when (selected) {
                 "DEEPSEEK" -> {
