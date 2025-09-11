@@ -83,6 +83,11 @@ GJavaDoc 是一款在 IntelliJ IDEA 中运行的“接口文档生成器”。�
 
 完整操作手册请见 `docs/USER_GUIDE.md`。
 
+## 联动 TIP：
+
+中间状态的上下文包保存在 `context-bundles/`，可以与我之前开发的 [UML 生成小工具](https://uml.chixitown.com/) 联动使用，效果如下：
+![img.png](img.png)
+![img_1.png](img_1.png)
 ## 联系方式
 
 - 微信：扫描下方二维码添加好友（备注“GJavaDoc”），一起交流插件使用与改进建议。
