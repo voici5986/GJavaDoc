@@ -1,37 +1,26 @@
 package com.gjavadoc.settings
 
-import com.intellij.openapi.options.Configurable
-import com.intellij.openapi.project.Project
-import com.intellij.openapi.project.ProjectManager
-import com.intellij.openapi.progress.ProgressIndicator
-import com.intellij.openapi.progress.ProgressManager
-import com.intellij.openapi.progress.Task
+import com.gjavadoc.prompt.PromptBuilder
+import com.intellij.icons.AllIcons
 import com.intellij.notification.Notification
 import com.intellij.notification.NotificationType
 import com.intellij.notification.Notifications
-import com.intellij.icons.AllIcons
-import com.intellij.ui.components.JBCheckBox
-import com.intellij.ui.components.JBTextArea
-import com.intellij.ui.components.JBTextField
-import com.intellij.ui.components.JBScrollPane
-import com.intellij.ui.components.JBLabel
-import com.intellij.ui.components.JBTabbedPane
-import com.intellij.ui.components.JBPasswordField
-import com.intellij.util.ui.FormBuilder
+import com.intellij.openapi.options.Configurable
+import com.intellij.openapi.progress.ProgressIndicator
+import com.intellij.openapi.progress.ProgressManager
+import com.intellij.openapi.progress.Task
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.project.ProjectManager
 import com.intellij.openapi.ui.Messages
-import com.intellij.openapi.ide.CopyPasteManager
-import java.awt.datatransfer.StringSelection
+import com.intellij.ui.components.*
+import com.intellij.util.ui.FormBuilder
 import java.awt.FlowLayout
-import javax.swing.JComponent
-import javax.swing.JPanel
-import javax.swing.JSpinner
-import javax.swing.SpinnerNumberModel
-import javax.swing.JButton
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.Duration
+import javax.swing.*
 
 class GJavaDocConfigurable() : Configurable {
     private val project: Project by lazy {
@@ -122,7 +111,15 @@ class GJavaDocConfigurable() : Configurable {
         wrapStyleWord = true
         maximumSize = java.awt.Dimension(800, 300)
     }
+    private val promptPresetsModel = DefaultComboBoxModel<String>()
+    private val promptPresetCombo = javax.swing.JComboBox(promptPresetsModel).apply {
+        preferredSize = java.awt.Dimension(260, preferredSize.height)
+    }
+    private val promptPresetAddBtn = JButton("Add / 新增", AllIcons.General.Add).apply {
+        toolTipText = "Add preset from editor"
+    }
     private val loadDefaultPromptBtn = JButton("Load Default / 载入默认模板")
+    private val promptPresets: MutableList<SettingsState.PromptPreset> = mutableListOf()
 
     private val panel: JPanel = JPanel(java.awt.BorderLayout()).apply {
         val tabs = JBTabbedPane()
@@ -235,6 +232,15 @@ class GJavaDocConfigurable() : Configurable {
         fun buildPrompt(): JPanel {
             val fb = FormBuilder.createFormBuilder()
             fb.addLabeledComponent(JBLabel("Use custom prompt / 使用自定义 Prompt"), customPromptEnabled, 1, false)
+            fb.addLabeledComponent(
+                JBLabel("Prompt Preset / 模板选择"),
+                JPanel(FlowLayout(FlowLayout.LEFT, 4, 0)).apply {
+                    add(promptPresetCombo)
+                    add(promptPresetAddBtn)
+                },
+                1,
+                false,
+            )
             fb.addLabeledComponent(JBLabel("Prompt Template / 提示词模板"), JBLabel("Placeholders: ${'$'}{ENTRY_CLASS_FQN}, ${'$'}{ENTRY_METHOD}, ${'$'}{ENTRY_METHOD_BASE}, ${'$'}{HTTP_METHOD}, ${'$'}{CONTEXT}"), 1, false)
             fb.addComponentToRightColumn(loadDefaultPromptBtn)
             
@@ -256,12 +262,43 @@ class GJavaDocConfigurable() : Configurable {
         add(tabs, java.awt.BorderLayout.CENTER)
     }
 
+    private fun refreshPromptPresetModel(preferredSelection: String?) {
+        promptPresetsModel.removeAllElements()
+        promptPresets.forEach { preset -> promptPresetsModel.addElement(preset.name) }
+        val target = preferredSelection
+            ?.takeIf { name -> promptPresets.any { it.name == name } }
+            ?: promptPresets.firstOrNull()?.name
+        promptPresetsModel.selectedItem = target
+    }
+
+    private fun ensureBuiltinPromptPresets() {
+        val builtinPresets = listOf(
+            SettingsState.PromptPreset(
+                name = "内置默认模板",
+                template = PromptBuilder.defaultTemplate(),
+            ),
+            SettingsState.PromptPreset(
+                name = "Java 代码走查",
+                template = PromptBuilder.javaReviewTemplate(),
+            ),
+        )
+        builtinPresets.forEach { builtin ->
+            if (promptPresets.none { it.name == builtin.name }) {
+                // Append missing built-in preset without overriding user edits
+                promptPresets.add(builtin)
+            }
+        }
+    }
+
     override fun getDisplayName(): String = "GJavaDoc"
 
     override fun createComponent(): JComponent = panel
 
     override fun isModified(): Boolean {
         val s = SettingsState.getInstance(project).state
+        val selectedPresetName = promptPresetCombo.selectedItem as? String
+        val uiSelectedPreset = selectedPresetName ?: promptPresets.firstOrNull()?.name
+        val stateSelectedPreset = s.selectedPromptPreset ?: s.promptPresets.firstOrNull()?.name
         return annotationField.text != s.annotation ||
                 endpointField.text != s.llmEndpoint ||
                 modelField.text != s.model ||
@@ -297,6 +334,8 @@ class GJavaDocConfigurable() : Configurable {
                 historyLimit.value != s.persist.historyLimit ||
                 customPromptEnabled.isSelected != s.customPromptEnabled ||
                 promptArea.text != s.customPrompt ||
+                promptPresets != s.promptPresets ||
+                uiSelectedPreset != stateSelectedPreset ||
                 openaiMaxTokens.value != s.openaiMaxTokens ||
                 openaiTemperature.value != s.openaiTemperature ||
                 openaiTopP.value != s.openaiTopP
@@ -340,6 +379,11 @@ class GJavaDocConfigurable() : Configurable {
         s.persist.historyLimit = (historyLimit.value as Int)
         s.customPromptEnabled = customPromptEnabled.isSelected
         s.customPrompt = promptArea.text
+        val selectedPresetName = promptPresetCombo.selectedItem as? String
+        s.promptPresets = promptPresets.map { preset ->
+            SettingsState.PromptPreset(name = preset.name, template = preset.template)
+        }.toMutableList()
+        s.selectedPromptPreset = selectedPresetName
         s.openaiMaxTokens = (openaiMaxTokens.value as Int)
         s.openaiTemperature = (openaiTemperature.value as Double)
         s.openaiTopP = (openaiTopP.value as Double)
@@ -383,6 +427,12 @@ class GJavaDocConfigurable() : Configurable {
             retryBackoff.value = s.retry.backoffMs.toInt()
             historyLimit.value = s.persist.historyLimit
             customPromptEnabled.isSelected = s.customPromptEnabled
+            promptPresets.clear()
+            promptPresets.addAll(s.promptPresets.map { preset ->
+                SettingsState.PromptPreset(name = preset.name, template = preset.template)
+            })
+            ensureBuiltinPromptPresets()
+            refreshPromptPresetModel(s.selectedPromptPreset)
             promptArea.text = s.customPrompt
             openaiMaxTokens.value = s.openaiMaxTokens
             openaiTemperature.value = s.openaiTemperature
@@ -528,9 +578,49 @@ class GJavaDocConfigurable() : Configurable {
                 }
             }
         }
+
+        promptPresetCombo.addActionListener {
+            if (isResetting) return@addActionListener
+            val name = promptPresetCombo.selectedItem as? String ?: return@addActionListener
+            val preset = promptPresets.firstOrNull { it.name == name } ?: return@addActionListener
+            promptArea.text = preset.template
+            if (!customPromptEnabled.isSelected) {
+                customPromptEnabled.isSelected = true
+            }
+        }
+
+        promptPresetAddBtn.addActionListener {
+            val rawName = Messages.showInputDialog(
+                panel,
+                "Preset name / 预设名称",
+                "Add Prompt Preset",
+                Messages.getQuestionIcon(),
+            )?.trim()
+            if (rawName.isNullOrEmpty()) {
+                return@addActionListener
+            }
+            val existingIndex = promptPresets.indexOfFirst { it.name == rawName }
+            if (existingIndex >= 0) {
+                val overwrite = Messages.showOkCancelDialog(
+                    panel,
+                    "Preset \"$rawName\" already exists. Overwrite with current content? / 预设已存在，是否覆盖为当前模板？",
+                    "Preset Exists",
+                    "Overwrite",
+                    "Cancel",
+                    Messages.getQuestionIcon(),
+                )
+                if (overwrite != Messages.OK) {
+                    return@addActionListener
+                }
+                promptPresets[existingIndex] = SettingsState.PromptPreset(name = rawName, template = promptArea.text)
+            } else {
+                promptPresets.add(SettingsState.PromptPreset(name = rawName, template = promptArea.text))
+            }
+            refreshPromptPresetModel(rawName)
+        }
         
         loadDefaultPromptBtn.addActionListener {
-            promptArea.text = com.gjavadoc.prompt.PromptBuilder.defaultTemplate()
+            promptArea.text = PromptBuilder.defaultTemplate()
         }
     }
 }

@@ -1,5 +1,6 @@
 package com.gjavadoc.settings
 
+import com.gjavadoc.prompt.PromptBuilder
 import com.intellij.openapi.components.PersistentStateComponent
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.State
@@ -58,6 +59,11 @@ class SettingsState : PersistentStateComponent<SettingsState.State> {
         var lastModule: String = "ALL",
     )
 
+    data class PromptPreset(
+        var name: String = "",
+        var template: String = "",
+    )
+
     data class State(
         var annotation: String = "@RpcService",
         var llmEndpoint: String = "http://127.0.0.1:8000/v1/chat/completions",
@@ -78,6 +84,11 @@ class SettingsState : PersistentStateComponent<SettingsState.State> {
         var persist: PersistConfig = PersistConfig(),
         var customPromptEnabled: Boolean = false,
         var customPrompt: String = "",
+        var promptPresets: MutableList<PromptPreset> = mutableListOf(
+            PromptPreset(name = "内置默认模板", template = PromptBuilder.defaultTemplate()),
+            PromptPreset(name = "Java 代码走查", template = PromptBuilder.javaReviewTemplate()),
+        ),
+        var selectedPromptPreset: String? = null,
         var ui: UIConfig = UIConfig(),
         var groupDocsByModule: Boolean = false,
         // OpenAI-compatible defaults (some servers require explicit values)
