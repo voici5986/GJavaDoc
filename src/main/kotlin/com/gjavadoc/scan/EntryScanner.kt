@@ -26,7 +26,12 @@ class EntryScanner(private val project: Project) {
             for (cls in psi.classes) {
                 val classTagged = hasAnyAnnotation(cls.modifierList, targets)
                 for (method in cls.methods) {
-                    val match = classTagged || hasAnyAnnotation(method.modifierList, targets)
+                    val methodTagged = hasAnyAnnotation(method.modifierList, targets)
+                    val match = if (settings.perClassDocument) {
+                        classTagged || methodTagged
+                    } else {
+                        methodTagged
+                    }
                     if (!match) continue
                     val ep = entryPointFor(vf, cls, method, settings.annotation)
                     result.add(ep)

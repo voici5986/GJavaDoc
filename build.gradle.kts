@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "com.gjavadoc"
-version = "0.3.4"
+version = "0.3.7"
 
 repositories {
   mavenCentral()
@@ -29,6 +29,9 @@ dependencies {
   implementation("com.ibm.wala:com.ibm.wala.core:1.6.0")
   implementation("com.ibm.wala:com.ibm.wala.util:1.6.0")
   implementation("com.ibm.wala:com.ibm.wala.shrike:1.6.0")
+
+  // Markdown to HTML conversion (for .doc export)
+  implementation("com.vladsch.flexmark:flexmark-all:0.64.8")
 
   // Tests for small utilities (no IntelliJ APIs involved)
   testImplementation(kotlin("test"))
@@ -73,4 +76,5 @@ tasks {
       }
     }
   }
+
 }

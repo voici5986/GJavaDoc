@@ -103,6 +103,8 @@ class GJavaDocConfigurable() : Configurable {
     private val patDelete = JBTextField("delete,remove,del,clear").apply { columns = 25 }
     private val perClassDoc = JBCheckBox("Per-class document / 类级文档（一个类→一个文档）", false)
     private val groupDocsByModule = JBCheckBox("Group docs by module / 文档按模块分目录", false)
+    private val writeMarkdown = JBCheckBox("Write Markdown (.md) / 输出 Markdown", true)
+    private val writeDoc = JBCheckBox("Write DOC (.doc) / 输出 DOC", true)
 
     // Prompt customization
     private val customPromptEnabled = JBCheckBox("Use custom prompt / 使用自定义 Prompt", false)
@@ -131,6 +133,8 @@ class GJavaDocConfigurable() : Configurable {
             fb.addLabeledComponent(JBLabel("Analysis Backend / 分析后端"), backendCombo, 1, false)
             fb.addComponent(perClassDoc)
             fb.addComponent(groupDocsByModule)
+            fb.addComponent(writeMarkdown)
+            fb.addComponent(writeDoc)
             fb.addSeparator()
             fb.addComponent(httpEnabled)
             fb.addLabeledComponent(JBLabel("Provider / 提供方"), providerCombo, 1, false)
@@ -324,6 +328,8 @@ class GJavaDocConfigurable() : Configurable {
                 patDelete.text != s.crudPatterns.delete.joinToString(",") ||
                 perClassDoc.isSelected != s.perClassDocument ||
                 groupDocsByModule.isSelected != s.groupDocsByModule ||
+                writeMarkdown.isSelected != s.writeMarkdown ||
+                writeDoc.isSelected != s.writeDoc ||
                 maxConcSpinner.value != s.maxConcurrentRequests ||
                 rpsSpinner.value != s.requestsPerSecond ||
                 queueSizeSpinner.value != s.queueSize ||
@@ -342,6 +348,21 @@ class GJavaDocConfigurable() : Configurable {
     }
 
     override fun apply() {
+        // Confirm when both outputs are disabled
+        val newWriteMd = writeMarkdown.isSelected
+        val newWriteDoc = writeDoc.isSelected
+        if (!newWriteMd && !newWriteDoc) {
+            val cont = Messages.showYesNoDialog(
+                project,
+                "已关闭 Markdown 与 DOC 输出：将不会写入 md/ 或 docs/ 文档文件。\n是否继续保存设置？",
+                "GJavaDoc",
+                "继续保存",
+                "取消",
+                null,
+            ) == Messages.YES
+            if (!cont) return
+        }
+
         val settings = SettingsState.getInstance(project)
         val s = settings.state
         s.annotation = annotationField.text
@@ -369,6 +390,8 @@ class GJavaDocConfigurable() : Configurable {
         s.crudPatterns.delete = patDelete.text.split(',').map { it.trim() }.filter { it.isNotEmpty() }.toMutableList()
         s.perClassDocument = perClassDoc.isSelected
         s.groupDocsByModule = groupDocsByModule.isSelected
+        s.writeMarkdown = writeMarkdown.isSelected
+        s.writeDoc = writeDoc.isSelected
         s.maxConcurrentRequests = (maxConcSpinner.value as Int)
         s.requestsPerSecond = (rpsSpinner.value as Double)
         s.queueSize = (queueSizeSpinner.value as Int)
@@ -418,6 +441,8 @@ class GJavaDocConfigurable() : Configurable {
             patDelete.text = s.crudPatterns.delete.joinToString(",")
             perClassDoc.isSelected = s.perClassDocument
             groupDocsByModule.isSelected = s.groupDocsByModule
+            writeMarkdown.isSelected = s.writeMarkdown
+            writeDoc.isSelected = s.writeDoc
             maxConcSpinner.value = s.maxConcurrentRequests
             rpsSpinner.value = s.requestsPerSecond
             queueSizeSpinner.value = s.queueSize

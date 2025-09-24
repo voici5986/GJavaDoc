@@ -16,6 +16,7 @@ import com.intellij.openapi.application.ReadAction
 import com.gjavadoc.util.MethodCategory
 import com.gjavadoc.util.classifyMethodName
 import com.gjavadoc.settings.SettingsState
+import com.intellij.openapi.ui.Messages
 
 @Service(Service.Level.PROJECT)
 class GJavaDocService(private val project: Project) {
@@ -24,6 +25,21 @@ class GJavaDocService(private val project: Project) {
     private val repo = project.getService(TaskRepository::class.java)
 
     fun startFullScan(crudOverride: SettingsState.CrudFilter? = null, moduleName: String? = null) {
+        // Confirm if both outputs are disabled
+        run {
+            val st = SettingsState.getInstance(project).state
+            if (!st.writeMarkdown && !st.writeDoc) {
+                val proceed = Messages.showYesNoDialog(
+                    project,
+                    "已关闭 Markdown 与 DOC 输出：运行后不会写入 md/ 或 docs/ 文档文件。\n是否继续运行扫描？",
+                    "GJavaDoc",
+                    "继续",
+                    "取消",
+                    null,
+                ) == Messages.YES
+                if (!proceed) return
+            }
+        }
         Notifications.Bus.notify(Notification("GJavaDoc", "GJavaDoc", "开始扫描入口（注解：" + com.gjavadoc.settings.SettingsState.getInstance(project).state.annotation + ")", NotificationType.INFORMATION), project)
         ProgressManager.getInstance().run(object: Task.Backgroundable(project, "GJavaDoc: 扫描入口", false) {
             override fun run(indicator: ProgressIndicator) {
@@ -177,7 +193,7 @@ class GJavaDocService(private val project: Project) {
      *  - com.pkg.Class#method
      *  - com.pkg.Class#method(argTypes...)
      *  - com.pkg.Class#CLASS （类级任务）
-     *  - 也尽力解析输出文件名安全化的前缀（如 xxx___123456.md/.txt）
+     *  - 也尽力解析输出文件名安全化的前缀（如 xxx___123456.doc/.md/.txt）
      */
     fun resumeFromList(raw: String, skipSucceeded: Boolean = true) {
         val lines = raw.lines().map { it.trim() }
@@ -212,7 +228,7 @@ class GJavaDocService(private val project: Project) {
 
                     // 解析单行，尽力返回 (classFqn, methodKey)；methodKey == "CLASS" 表示类级任务
                     fun parseLine(line: String): Pair<String, String>? {
-                        var s = line.trim().removeSuffix(".md").removeSuffix(".txt")
+                        var s = line.trim().removeSuffix(".md").removeSuffix(".doc").removeSuffix(".txt")
                         // 去掉时间戳后缀：_{digits}（一个或多个下划线）
                         run {
                             var i = s.length - 1
