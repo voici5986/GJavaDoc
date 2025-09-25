@@ -183,10 +183,21 @@ class QueueManager(private val project: Project) {
                     val jsonPath = if (doc.json.isNotBlank()) out.writeRelative("method-docs/${safe(task.taskId)}.json", doc.json) else null
                     val mdClean = unwrapMarkdownFence(doc.markdown)
                     val modFolder = moduleFolderFor(task.entry)
-                    val mdRel = if (modFolder != null) "docs/${modFolder}/${safe(task.taskId)}.md" else "docs/${safe(task.taskId)}.md"
-                    val mdPath = out.writeRelative(mdRel, mdClean)
+                    val classSubDir = if (task.scope == TaskScope.METHOD) classFolderFor(task.entry) else null
 
-                    task.result = TaskResult(jsonPath = jsonPath, mdPath = mdPath, ctxPath = ctx.path)
+                    val st = settings
+                    val mdPath = if (st.writeMarkdown) {
+                        val mdRel = relativePath("md", modFolder, classSubDir, "${safe(task.taskId)}.md")
+                        out.writeRelative(mdRel, mdClean)
+                    } else null
+
+                    val docPath = if (st.writeDoc) {
+                        val docHtml = com.gjavadoc.io.MarkdownDocExporter.renderToWordHtml(mdClean, title = task.entry.classFqn + "#" + task.entry.method)
+                        val docRel = relativePath("docs", modFolder, classSubDir, "${safe(task.taskId)}.doc")
+                        out.writeRelative(docRel, docHtml)
+                    } else null
+
+                    task.result = TaskResult(jsonPath = jsonPath, mdPath = mdPath, docPath = docPath, ctxPath = ctx.path)
                     updateStatus(task, TaskStatus.SUCCEEDED, 1.0, "Done")
                     repo.finished(task)
                 } catch (e: InterruptedException) {
@@ -234,6 +245,25 @@ class QueueManager(private val project: Project) {
         publishHeartbeat()
     }
 
+    private fun classFolderFor(entry: EntryPoint): String {
+        val segments = entry.classFqn
+            .ifBlank { "UnknownClass" }
+            .replace('$', '.')
+            .split('.')
+            .filter { it.isNotBlank() }
+            .map { part -> part.replace(Regex("[^a-zA-Z0-9_-]"), "_") }
+        if (segments.isEmpty()) return "UnknownClass"
+        return segments.joinToString("/")
+    }
+
+    private fun relativePath(root: String, moduleFolder: String?, classFolder: String?, fileName: String): String {
+        val parts = mutableListOf(root)
+        moduleFolder?.takeIf { it.isNotBlank() }?.let { parts.add(it) }
+        classFolder?.takeIf { it.isNotBlank() }?.let { parts.add(it) }
+        parts.add(fileName)
+        return parts.joinToString("/")
+    }
+
     private fun safe(id: String): String = id.replace(Regex("[^a-zA-Z0-9._-]"), "_")
 
     private fun moduleFolderFor(entry: EntryPoint): String? {
@@ -246,14 +276,16 @@ class QueueManager(private val project: Project) {
         } catch (_: Throwable) { null }
     }
 
-    // If markdown is wrapped by a ```markdown ... ``` fence, strip the outer fence.
+    // If markdown is wrapped by a top-level ```...``` fence (markdown/md/html/plain), strip the outer fence.
     private fun unwrapMarkdownFence(md: String): String {
         val text = md.trim('\uFEFF', ' ', '\n', '\r', '\t')
         val lines = text.lines()
         if (lines.size >= 2) {
             val first = lines.first().trim()
             val last = lines.last().trim()
-            if (first == "```markdown" && last == "```") {
+            val openFence = Regex("^```(?:(?i:markdown|md|html|json|text))?\\s*$")
+            val closeFence = Regex("^```\\s*$")
+            if (openFence.matches(first) && closeFence.matches(last)) {
                 return lines.subList(1, lines.size - 1).joinToString("\n").trimEnd()
             }
         }

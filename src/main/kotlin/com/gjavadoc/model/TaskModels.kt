@@ -20,6 +20,7 @@ data class TaskProgress(
 data class TaskResult(
     val jsonPath: String? = null,
     val mdPath: String? = null,
+    val docPath: String? = null,
     val ctxPath: String? = null,
 )
 

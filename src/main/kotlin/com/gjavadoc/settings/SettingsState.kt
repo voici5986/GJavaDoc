@@ -91,6 +91,9 @@ class SettingsState : PersistentStateComponent<SettingsState.State> {
         var selectedPromptPreset: String? = null,
         var ui: UIConfig = UIConfig(),
         var groupDocsByModule: Boolean = false,
+        // Output toggles
+        var writeMarkdown: Boolean = true,
+        var writeDoc: Boolean = true,
         // OpenAI-compatible defaults (some servers require explicit values)
         var openaiMaxTokens: Int = 4096,
         var openaiTemperature: Double = 0.7,

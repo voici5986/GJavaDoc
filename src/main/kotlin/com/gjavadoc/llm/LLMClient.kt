@@ -89,7 +89,6 @@ class HttpLLMClient(private val project: Project) : LLMClient {
                     {"role":"user","content": ${jsonEscape(prompt)}}
                   ],
                   "stream": false,
-                  "max_tokens": ${s.openaiMaxTokens},
                   "temperature": ${formatNum(s.openaiTemperature)},
                   "top_p": ${formatNum(s.openaiTopP)}
                 }

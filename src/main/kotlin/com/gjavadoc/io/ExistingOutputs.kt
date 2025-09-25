@@ -30,36 +30,38 @@ object ExistingOutputs {
             return s
         }
 
-        fun collect(dir: File) {
+        fun collect(dir: File, extensions: Set<String>) {
             if (!dir.exists() || !dir.isDirectory) return
             dir.walkTopDown().forEach { f ->
                 if (!f.isFile) return@forEach
                 val name = f.name
-                if (!name.endsWith(".md", true)) return@forEach // only docs/*.md
-                val stem0 = name.removeSuffix(".md")
+                val ext = name.substringAfterLast('.', "").lowercase()
+                if (ext !in extensions) return@forEach
+                val stem0 = name.substring(0, name.length - ext.length - 1)
                 val stem = trimTimestampSuffix(stem0)
                 val us = stem.indexOf('_')
                 if (us <= 0) {
-                    // No underscore => treat as class-level doc (entire stem is classFqn)
-                    classes.add(stem)
+                    // No underscore => treat as class-level doc (requires plausible FQN)
+                    if (stem.contains('.')) classes.add(stem)
                     return@forEach
                 }
                 val cls = stem.substring(0, us)
+                if (cls.isBlank() || !cls.contains('.')) return@forEach
                 val methodPart = stem.substring(us + 1)
                 if (methodPart.equals("CLASS", ignoreCase = true)) {
                     classes.add(cls)
                 } else {
                     val base = methodPart.substringBefore('_')
-                    if (cls.isNotBlank() && base.isNotBlank()) {
-                        byName.add(cls to base)
-                        // exact key is the full methodPart without trailing underscores (already trimmed by timestamp logic)
-                        exact.add(cls to methodPart)
-                    }
+                    if (base.isBlank()) return@forEach
+                    byName.add(cls to base)
+                    // exact key is the full methodPart without trailing underscores (already trimmed by timestamp logic)
+                    exact.add(cls to methodPart)
                 }
             }
         }
 
-        collect(docs)
+        collect(docs, setOf("md", "doc"))
+        collect(File(basePath, "md"), setOf("md"))
         return Result(methodsExact = exact, methodsByName = byName, classSet = classes)
     }
 }

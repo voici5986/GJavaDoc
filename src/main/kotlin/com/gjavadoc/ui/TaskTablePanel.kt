@@ -63,6 +63,13 @@ class TaskTablePanel(private val project: Project) {
                 openPath(task.result?.mdPath)
             }
         }
+        val openDoc = object : com.intellij.openapi.actionSystem.AnAction("Open DOC", null, AllIcons.FileTypes.Text) {
+            override fun actionPerformed(e: com.intellij.openapi.actionSystem.AnActionEvent) {
+                val idx = table.selectedRow
+                val task = tableModel.getItemAt(idx) ?: return
+                openPath(task.result?.docPath)
+            }
+        }
         val openCtx = object : com.intellij.openapi.actionSystem.AnAction("Open Context", null, AllIcons.Actions.Preview) {
             override fun actionPerformed(e: com.intellij.openapi.actionSystem.AnActionEvent) {
                 val idx = table.selectedRow
@@ -161,7 +168,7 @@ class TaskTablePanel(private val project: Project) {
         }
 
         val decorator = ToolbarDecorator.createDecorator(table)
-            .addExtraActions(runScan, stopQueue, cancelSelected, cancelAll, retry, retryFailed, retryTimeouts, requeue, clearAll, resumeFromList, openSource, openCtx, openJson, openMd, editPrompt)
+            .addExtraActions(runScan, stopQueue, cancelSelected, cancelAll, retry, retryFailed, retryTimeouts, requeue, clearAll, resumeFromList, openSource, openCtx, openJson, openMd, openDoc, editPrompt)
 
         val filterPanel = JPanel().apply {
             layout = BoxLayout(this, BoxLayout.Y_AXIS)
@@ -266,6 +273,7 @@ class TaskTablePanel(private val project: Project) {
                 // Hide JSON, Markdown columns when compact
                 setColumnVisible(5, !compact)
                 setColumnVisible(6, !compact)
+                setColumnVisible(7, !compact)
                 // Favor Entry column width
                 setColumnVisible(1, true)
                 table.autoResizeMode = javax.swing.JTable.AUTO_RESIZE_SUBSEQUENT_COLUMNS
@@ -403,7 +411,7 @@ class TaskTablePanel(private val project: Project) {
     private fun openOutputForSelected() {
         val idx = table.selectedRow
         val task = tableModel.getItemAt(idx) ?: return
-        openPath(task.result?.mdPath ?: task.result?.jsonPath)
+        openPath(task.result?.docPath ?: task.result?.mdPath ?: task.result?.jsonPath)
     }
 
     private fun openPath(path: String?, line: Int? = null) {
@@ -428,6 +436,7 @@ class TaskTablePanel(private val project: Project) {
             if (t.cgSummary != null) appendLine("CG: ${t.cgSummary}")
             if (t.result?.jsonPath != null) appendLine("JSON: ${t.result?.jsonPath}")
             if (t.result?.mdPath != null) appendLine("MD: ${t.result?.mdPath}")
+            if (t.result?.docPath != null) appendLine("DOC: ${t.result?.docPath}")
             if (t.error != null) appendLine("Error: ${t.error?.type} ${t.error?.message}")
         }
     }
